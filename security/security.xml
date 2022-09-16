@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+	<!-- <data noupdate="0"> -->
+		<record id="riesgonet_config_rule" model="ir.rule">
+			<field name="name">Riesgonet Configuracion multi-company</field>
+			<field name="model_id" ref="model_financiera_riesgonet_configuracion"/>
+			<field eval="True" name="global"/>
+			<field name="domain_force">[('company_id','child_of',[user.company_id.id])]</field>
+		</record>
+
+		<record id="riesgonet_informe_rule" model="ir.rule">
+			<field name="name">Riesgonet Informe multi-company</field>
+			<field name="model_id" ref="model_financiera_riesgonet_informe"/>
+			<field eval="True" name="global"/>
+			<field name="domain_force">[('company_id','child_of',[user.company_id.id])]</field>
+		</record>
+
+		<record id="riesgonet_informe_variable_rule" model="ir.rule">
+			<field name="name">Riesgonet Informe Variable multi-company</field>
+			<field name="model_id" ref="model_financiera_riesgonet_informe_variable"/>
+			<field eval="True" name="global"/>
+			<field name="domain_force">[('company_id','child_of',[user.company_id.id])]</field>
+		</record>
+
+		<record id="riesgonet_cda_rule" model="ir.rule">
+			<field name="name">Riesgonet CDA multi-company</field>
+			<field name="model_id" ref="model_financiera_riesgonet_cda"/>
+			<field eval="True" name="global"/>
+			<field name="domain_force">[('company_id','child_of',[user.company_id.id])]</field>
+		</record>
+
+		<!-- <record id="riesgonet_cuestionario_rule" model="ir.rule">
+			<field name="name">Riesgonet Cuestionario multi-company</field>
+			<field name="model_id" ref="model_financiera_riesgonet_cuestionario"/>
+			<field eval="True" name="global"/>
+			<field name="domain_force">[('company_id','child_of',[user.company_id.id])]</field>
+		</record>
+
+		<record id="riesgonet_cuestionario_pregunta_rule" model="ir.rule">
+			<field name="name">Riesgonet Pregunta multi-company</field>
+			<field name="model_id" ref="model_financiera_riesgonet_cuestionario_pregunta"/>
+			<field eval="True" name="global"/>
+			<field name="domain_force">[('company_id','child_of',[user.company_id.id])]</field>
+		</record>
+
+		<record id="riesgonet_cuestionario_pregunta_opcion_rule" model="ir.rule">
+			<field name="name">Riesgonet Pregunta Opcion multi-company</field>
+			<field name="model_id" ref="model_financiera_riesgonet_cuestionario_pregunta_opcion"/>
+			<field eval="True" name="global"/>
+			<field name="domain_force">[('company_id','child_of',[user.company_id.id])]</field>
+		</record> -->
+
+	<!-- </data>  -->
+</openerp>
