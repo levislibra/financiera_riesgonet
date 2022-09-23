@@ -10,11 +10,8 @@ class FinancieraRiesgonetConfiguracion(models.Model):
 	_name = 'financiera.riesgonet.configuracion'
 
 	name = fields.Char('Nombre')
-	matriz = fields.Char('Matriz')
 	usuario = fields.Char('Usuario')
 	password = fields.Char('Password')
-	sector = fields.Char('Sector')
-	sucursal = fields.Char('Sucursal')
 	
 	ejecutar_cda_al_solicitar_informe = fields.Boolean('Ejecutar CDAs al solicitar informe')
 	solicitar_informe_enviar_a_revision = fields.Boolean('Solicitar informe al enviar a revision')

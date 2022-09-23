@@ -2,11 +2,14 @@
 
 from openerp import models, fields, api
 from openerp.exceptions import UserError, ValidationError
-import requests
-import xml.etree.ElementTree as ET
 
-ENDPOINT_RIESGONET_TEST = 'https://prepro.online.org.riesgonet.com.ar/pls/consulta817/wserv'
-ENDPOINT_RIESGONET_PRODUCCION = 'https://online.org.riesgonet.com.ar/pls/consulta817/wserv'
+from requests.auth import HTTPBasicAuth
+from requests import Session
+from zeep import Client, helpers
+from zeep.transports import Transport
+import collections
+
+ENDPOINT_RIESGONET_PRODUCCION = 'http://ws.riesgonet.com/variablesrn/?wsdl'
 # ENDPOINT_RIESGONET_VID = 'https://ws02.riesgonet.com/rest/validacion'
 
 class ExtendsResPartnerRiesgonet(models.Model):
@@ -23,106 +26,68 @@ class ExtendsResPartnerRiesgonet(models.Model):
 	riesgonet_capacidad_pago_mensual = fields.Float('Riesgonet - CPM', digits=(16,2))
 	riesgonet_partner_tipo_id = fields.Many2one('financiera.partner.tipo', 'Riesgonet - Tipo de cliente')
 
-
 	pregunta_ids = fields.Char('Preguntas')
-
 
 	# Validacion por cuestionario
 	# riesgonet_cuestionario_ids = fields.One2many('financiera.riesgonet.cuestionario', 'partner_id', 'Riesgonet - Cuestionarios')
 	# riesgonet_cuestionario_id = fields.Many2one('financiera.riesgonet.cuestionario', 'Riesgonet - Cuestionario actual')
 
-	def riesgonet_xml(self):
-		return """
-			<?xml version="1.0" encoding="ISO-8859-1"?>
-			<mensaje>
-				<identificador>
-					<userlogon>
-						<matriz>
-							<![CDATA[completar_matriz]]>
-						</matriz>
-						<usuario>
-							<![CDATA[completar_usuario]]>
-						</usuario>
-						<password>
-							<![CDATA[completar_clave]]>
-						</password>
-					</userlogon>
-					<formatoInforme>H</formatoInforme>
-					<reenvio />
-					<producto>RISC:Experto</producto>
-					<lote>
-						<sectorRiesgonet>completar_sector</sectorRiesgonet>
-						<sucursalRiesgonet>completar_sucursal</sucursalRiesgonet>
-						<cliente>completar_cliente_id</cliente>
-					</lote>
-				</identificador>
-				<consulta>
-					<integrantes>1</integrantes>
-					<integrante valor="1">
-						<sexo>completar_sexo</sexo>
-						<documento>
-							<![CDATA[completar_documento]]>
-						</documento>
-					</integrante>
-				</consulta>
-			</mensaje>
-		"""
+	def flatten(self, d, parent_key='', sep='_'):
+		items = []
+		for k, v in d.items():
+			new_key = parent_key + sep + k if parent_key else k
+			if isinstance(v, collections.MutableMapping):
+				items.extend(self.flatten(v, new_key, sep=sep).items())
+			else:
+				items.append((new_key, v))
+		return dict(items)
 
 	@api.one
 	def solicitar_informe_riesgonet(self):
 		riesgonet_configuracion_id = self.company_id.riesgonet_configuracion_id
-		riesgonet_xml = self.riesgonet_xml().replace('\n', '').replace('\t', '')
-		riesgonet_xml = riesgonet_xml.replace('completar_matriz', riesgonet_configuracion_id.matriz)
-		riesgonet_xml = riesgonet_xml.replace('completar_usuario', riesgonet_configuracion_id.usuario)
-		riesgonet_xml = riesgonet_xml.replace('completar_clave', riesgonet_configuracion_id.password)
-		# riesgonet_xml.replace('completar_medio', medio)
-		riesgonet_xml = riesgonet_xml.replace('completar_sector', riesgonet_configuracion_id.sector)
-		riesgonet_xml = riesgonet_xml.replace('completar_sucursal', riesgonet_configuracion_id.sucursal)
-		riesgonet_xml = riesgonet_xml.replace('completar_cliente_id', str(self.id))
-		# riesgonet_xml.replace('completar_apellido', self.apellido)
-		# riesgonet_xml.replace('completar_nombre', self.nombre)
-		riesgonet_xml = riesgonet_xml.replace('completar_sexo', 'M' if self.sexo == 'masculino' else 'F')
-		riesgonet_xml = riesgonet_xml.replace('completar_documento', str(self.dni))
-		print('riesgonet_xml', riesgonet_xml)
-		root = ET.fromstring(riesgonet_xml)
-		response = requests.get(ENDPOINT_RIESGONET_TEST, data=root)
-		print('response', response)
-		print('response.text', response.text)
-		data = response.json()
-		print('data', data)
-		if response.status_code != 200:
-			raise ValidationError("Error en la consulta de informe Riesgonet: "+data['Contenido']['Resultado']['Novedad'])
+		session = Session()
+		session.auth = HTTPBasicAuth(riesgonet_configuracion_id.usuario, riesgonet_configuracion_id.password)
+		client = Client(ENDPOINT_RIESGONET_PRODUCCION, transport=Transport(session=session))
+		print('client', client)
+		sexo = 'M' if self.sexo == 'masculino' else 'F'
+		payload = {
+			'modoConsulta': '1',
+			'identificacion': {
+				'usuario': riesgonet_configuracion_id.usuario,
+				'password': riesgonet_configuracion_id.password,
+				'legajo': 'PRUEBA WEB SERVICE',
+			},
+			'datosConsulta': {
+				'identidad': {
+					'dni': self.dni,
+					"versionDNI": "",
+					'sexo': sexo,
+					'apellido': '',
+					'nombre': '',
+				},
+				'fechaNacimiento': '',
+			},
+		}
+		print('payload: ', payload)
+		# call post cliente with body
+		response = client.service.getVariables_RN(payload)
+		response_json = helpers.serialize_object(response, dict)
+		print('response', response_json)
+		print('response[resultado]', response_json['resultado'])
+		if response_json['resultado'] == 0:
+			raise ValidationError("Error en la consulta de informe Riesgonet: "+response_json['diagnostico']['detalle'])
 		else:
-			nuevo_informe_id = self.env['financiera.riesgonet.informe'].create({})
-			self.riesgonet_informe_ids = [nuevo_informe_id.id]
-			self.riesgonet_variable_ids = [(6, 0, [])]
-			direccion = []
-			direccion_variables = []
-			if riesgonet_configuracion_id.asignar_direccion_cliente:
-				if riesgonet_configuracion_id.asignar_calle_cliente_variable:
-					direccion_variables.append(riesgonet_configuracion_id.asignar_calle_cliente_variable)
-				if riesgonet_configuracion_id.asignar_nro_cliente_variable:
-					direccion_variables.append(riesgonet_configuracion_id.asignar_nro_cliente_variable)
-				if riesgonet_configuracion_id.asignar_piso_cliente_variable:
-					direccion_variables.append(riesgonet_configuracion_id.asignar_piso_cliente_variable)
-				if riesgonet_configuracion_id.asignar_departamento_cliente_variable:
-					direccion_variables.append(riesgonet_configuracion_id.asignar_departamento_cliente_variable)
 			list_values = []
-			for variable in data['Contenido']['Datos']['Variables']:
-				variable_nombre = variable['Nombre']
-				variable_valor = variable['Valor']
-				variable_fecha = None
-				if 'FechaAct' in variable:
-					variable_fecha = variable['FechaAct']
-				variable_descripcion = variable['Descripcion']
-				variable_tipo = variable['Tipo']
+			flatten_dict = self.flatten(response_json)
+			print('flatten_dict', flatten_dict)
+			variables = flatten_dict.iteritems()
+			print('variables', variables)
+			for variable in variables:
+				variable_nombre, variable_valor = variable
 				variable_values = {
 					'partner_id': self.id,
 					'name': variable_nombre,
 					'valor': variable_valor,
-					'fecha': variable_fecha,
-					'descripcion': variable_descripcion,
-					'tipo': variable_tipo,
 				}
 				list_values.append((0,0, variable_values))
 				if riesgonet_configuracion_id.asignar_nombre_cliente:
@@ -149,6 +114,9 @@ class ExtendsResPartnerRiesgonet(models.Model):
 							self.sexo = 'masculino'
 						elif variable_valor == 'F':
 							self.sexo = 'femenino'
+			nuevo_informe_id = self.env['financiera.riesgonet.informe'].create({})
+			self.riesgonet_informe_ids = [nuevo_informe_id.id]
+			self.riesgonet_variable_ids = [(6, 0, [])]
 			nuevo_informe_id.write({'variable_ids': list_values})
 			self.asignar_variables()
 			if riesgonet_configuracion_id.asignar_direccion_cliente:

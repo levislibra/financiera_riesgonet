@@ -28,11 +28,8 @@
                 <field name="company_id" groups="base.group_erp_manager" />
                 <field name="name" />
                 <separator string="Información conexión" colspan="2" />
-                <field name="matriz"/>
                 <field name="usuario"/>
                 <field name="password"/>
-                <field name="sector"/>
-                <field name="sucursal"/>
               </group>
               <group>
                 <field name="ejecutar_cda_al_solicitar_informe" />
