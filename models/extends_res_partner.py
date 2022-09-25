@@ -2,6 +2,7 @@
 
 from openerp import models, fields, api
 from openerp.exceptions import UserError, ValidationError
+import time
 
 from requests.auth import HTTPBasicAuth
 from requests import Session
@@ -9,8 +10,20 @@ from zeep import Client, helpers
 from zeep.transports import Transport
 import collections
 
+
 ENDPOINT_RIESGONET_PRODUCCION = 'http://ws.riesgonet.com/variablesrn/?wsdl'
 # ENDPOINT_RIESGONET_VID = 'https://ws02.riesgonet.com/rest/validacion'
+
+VARIABLES_RIESGONET = {
+	'apellido': 'individualizacion_apellido',
+	'nombre': 'individualizacion_nombre',
+	'genero': 'individualizacion_genero',
+	'cuit': 'individualizacion_cuit',
+	'direccion': 'domicilio_calleAlturaPisoDepto',
+	'lodalidad': 'domicilio_localidad',
+	'provincia': 'domicilio_provincia',
+	'cp': 'domicilio_cp_cpa',
+}
 
 class ExtendsResPartnerRiesgonet(models.Model):
 	_name = 'res.partner'
@@ -90,26 +103,26 @@ class ExtendsResPartnerRiesgonet(models.Model):
 					'valor': variable_valor,
 				}
 				list_values.append((0,0, variable_values))
-				if riesgonet_configuracion_id.asignar_nombre_cliente:
-					if variable_nombre == riesgonet_configuracion_id.asignar_nombre_cliente_variable:
+				if riesgonet_configuracion_id.asignar_nombre:
+					if variable_nombre == riesgonet_configuracion_id.asignar_nombre_variable:
 						self.name = variable_valor
-				if riesgonet_configuracion_id.asignar_direccion_cliente:
+				if riesgonet_configuracion_id.asignar_direccion:
 					if variable_nombre in direccion_variables:
 						direccion.append(variable_valor)
-				if riesgonet_configuracion_id.asignar_ciudad_cliente:
-					if variable_nombre == riesgonet_configuracion_id.asignar_ciudad_cliente_variable:
+				if riesgonet_configuracion_id.asignar_ciudad:
+					if variable_nombre == riesgonet_configuracion_id.asignar_ciudad_variable:
 						self.city = variable_valor
-				if riesgonet_configuracion_id.asignar_cp_cliente:
-					if variable_nombre == riesgonet_configuracion_id.asignar_cp_cliente_variable:
+				if riesgonet_configuracion_id.asignar_cp:
+					if variable_nombre == riesgonet_configuracion_id.asignar_cp_variable:
 						self.zip = variable_valor
-				if riesgonet_configuracion_id.asignar_provincia_cliente:
-					if variable_nombre == riesgonet_configuracion_id.asignar_provincia_cliente_variable:
+				if riesgonet_configuracion_id.asignar_provincia:
+					if variable_nombre == riesgonet_configuracion_id.asignar_provincia_variable:
 						self.set_provincia(variable_valor)
-				if riesgonet_configuracion_id.asignar_identificacion_cliente:
-					if variable_nombre == riesgonet_configuracion_id.asignar_identificacion_cliente_variable:
+				if riesgonet_configuracion_id.asignar_identificacion:
+					if variable_nombre == riesgonet_configuracion_id.asignar_identificacion_variable:
 						self.main_id_number = variable_valor
-				if riesgonet_configuracion_id.asignar_genero_cliente:
-					if variable_nombre == riesgonet_configuracion_id.asignar_genero_cliente_variable:
+				if riesgonet_configuracion_id.asignar_genero:
+					if variable_nombre == riesgonet_configuracion_id.asignar_genero_variable:
 						if variable_valor == 'M':
 							self.sexo = 'masculino'
 						elif variable_valor == 'F':
@@ -119,11 +132,65 @@ class ExtendsResPartnerRiesgonet(models.Model):
 			self.riesgonet_variable_ids = [(6, 0, [])]
 			nuevo_informe_id.write({'variable_ids': list_values})
 			self.asignar_variables()
-			if riesgonet_configuracion_id.asignar_direccion_cliente:
+			self.enriquecer_partner()
+			if riesgonet_configuracion_id.asignar_direccion:
 				if len(direccion) > 0:
 					self.street = ' '.join(direccion)
 			if riesgonet_configuracion_id.ejecutar_cda_al_solicitar_informe:
 				nuevo_informe_id.ejecutar_cdas()
+
+
+	@api.one
+	def enriquecer_partner(self):
+		start = time.time()
+		riesgonet_configuracion_id = self.company_id.riesgonet_configuracion_id
+		vals = {}
+		variable_apellido_id = False
+		variable_nombre_id = False
+		if riesgonet_configuracion_id.asignar_nombre:
+			variable_apellido_id = self.riesgonet_variable_ids.filtered(lambda x: x.name == VARIABLES_RIESGONET['apellido'])
+			variable_nombre_id = self.riesgonet_variable_ids.filtered(lambda x: x.name == VARIABLES_RIESGONET['nombre'])
+			if variable_apellido_id and variable_nombre_id:
+				vals['name'] = variable_apellido_id.valor + ' ' + variable_nombre_id.valor
+		if riesgonet_configuracion_id.asignar_direccion:
+			variable_direccion_id = self.riesgonet_variable_ids.filtered(lambda x: x.name == VARIABLES_RIESGONET['direccion'])
+			if variable_direccion_id:
+				vals['street'] = variable_direccion_id.valor
+		if riesgonet_configuracion_id.asignar_ciudad:
+			variable_ciudad_id = self.riesgonet_variable_ids.filtered(lambda x: x.name == VARIABLES_RIESGONET['lodalidad'])
+			if variable_ciudad_id:
+				vals['city'] = variable_ciudad_id.valor
+		if riesgonet_configuracion_id.asignar_cp:
+			variable_cp_id = self.riesgonet_variable_ids.filtered(lambda x: x.name == VARIABLES_RIESGONET['cp'])
+			if variable_cp_id:
+				vals['zip'] = variable_cp_id.valor
+		if riesgonet_configuracion_id.asignar_provincia:
+			variable_provincia_id = self.riesgonet_variable_ids.filtered(lambda x: x.name == VARIABLES_RIESGONET['provincia'])
+			if variable_provincia_id:
+				self.set_provincia(variable_provincia_id.valor)
+		if riesgonet_configuracion_id.asignar_cuit:
+			variable_cuit_id = self.riesgonet_variable_ids.filtered(lambda x: x.name == VARIABLES_RIESGONET['cuit'])
+			if variable_cuit_id:
+				vals['main_id_category_id'] = 25
+				vals['main_id_number'] = variable_cuit_id.valor
+		if riesgonet_configuracion_id.asignar_genero:
+			variable_genero_id = self.riesgonet_variable_ids.filtered(lambda x: x.name == VARIABLES_RIESGONET['genero'])
+			if variable_genero_id:
+				if variable_genero_id.valor == 'M':
+					vals['sexo'] = 'masculino'
+				elif variable_genero_id.valor == 'F':
+					vals['sexo'] = 'femenino'
+		self.write(vals)
+		end = time.time()
+		delta = end - start
+
+		# time difference in seconds
+		print("Time difference in seconds is: ", delta)
+
+		# time difference in milliseconds
+		ms = delta * 1000
+		print("Time difference in milliseconds is: ", ms)
+
 
 	@api.one
 	def asignar_variables(self):

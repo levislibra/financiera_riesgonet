@@ -15,9 +15,10 @@
 								<group string="Funciones" col="1">
 									<button name="button_solicitar_informe_riesgonet" string="Solicitar informe" type="object" confirm="Desea solicitar el informe?" groups="financiera_riesgonet.solicitar_informe" />
 									<button name="ejecutar_cdas_riesgonet" string="Ejecutar CDAs" type="object" confirm="Desea ejecutar el CDA?" />
-									<button name="riesgonet_report" string="Imprimir informe Riesgonet" type="object" />
-									<button name="button_obtener_cuestionario_riesgonet" string="Obtener cuestionario" type="object" confirm="Desea obtener el cuestionario?" groups="financiera_riesgonet.solicitar_informe" />
-									<!-- <field name='riesgonet_cuestionario_id' /> -->
+									<button name="enriquecer_partner" string="Enriquecer info del cliente" type="object" confirm="Desea realizar la accion?" />
+									<!-- <button name="riesgonet_report" string="Imprimir informe Riesgonet" type="object" /> -->
+									<!-- <button name="button_obtener_cuestionario_riesgonet" string="Obtener cuestionario" type="object" confirm="Desea obtener el cuestionario?" groups="financiera_riesgonet.solicitar_informe" /> -->
+									
 								</group>
 							</group>
 							<group string="Otorgamiento" col="1" style="background-color: lightsteelblue;">
