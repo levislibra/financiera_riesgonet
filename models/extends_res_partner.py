@@ -103,46 +103,19 @@ class ExtendsResPartnerRiesgonet(models.Model):
 					'valor': variable_valor,
 				}
 				list_values.append((0,0, variable_values))
-				if riesgonet_configuracion_id.asignar_nombre:
-					if variable_nombre == riesgonet_configuracion_id.asignar_nombre_variable:
-						self.name = variable_valor
-				if riesgonet_configuracion_id.asignar_direccion:
-					if variable_nombre in direccion_variables:
-						direccion.append(variable_valor)
-				if riesgonet_configuracion_id.asignar_ciudad:
-					if variable_nombre == riesgonet_configuracion_id.asignar_ciudad_variable:
-						self.city = variable_valor
-				if riesgonet_configuracion_id.asignar_cp:
-					if variable_nombre == riesgonet_configuracion_id.asignar_cp_variable:
-						self.zip = variable_valor
-				if riesgonet_configuracion_id.asignar_provincia:
-					if variable_nombre == riesgonet_configuracion_id.asignar_provincia_variable:
-						self.set_provincia(variable_valor)
-				if riesgonet_configuracion_id.asignar_identificacion:
-					if variable_nombre == riesgonet_configuracion_id.asignar_identificacion_variable:
-						self.main_id_number = variable_valor
-				if riesgonet_configuracion_id.asignar_genero:
-					if variable_nombre == riesgonet_configuracion_id.asignar_genero_variable:
-						if variable_valor == 'M':
-							self.sexo = 'masculino'
-						elif variable_valor == 'F':
-							self.sexo = 'femenino'
 			nuevo_informe_id = self.env['financiera.riesgonet.informe'].create({})
 			self.riesgonet_informe_ids = [nuevo_informe_id.id]
 			self.riesgonet_variable_ids = [(6, 0, [])]
 			nuevo_informe_id.write({'variable_ids': list_values})
-			self.asignar_variables()
-			self.enriquecer_partner()
-			if riesgonet_configuracion_id.asignar_direccion:
-				if len(direccion) > 0:
-					self.street = ' '.join(direccion)
+			self.asignar_variables_riesgonet()
+			self.enriquecer_partner_riesgonet()
 			if riesgonet_configuracion_id.ejecutar_cda_al_solicitar_informe:
 				nuevo_informe_id.ejecutar_cdas()
 
 
 	@api.one
-	def enriquecer_partner(self):
-		start = time.time()
+	def enriquecer_partner_riesgonet(self):
+		# start = time.time()
 		riesgonet_configuracion_id = self.company_id.riesgonet_configuracion_id
 		vals = {}
 		variable_apellido_id = False
@@ -181,19 +154,14 @@ class ExtendsResPartnerRiesgonet(models.Model):
 				elif variable_genero_id.valor == 'F':
 					vals['sexo'] = 'femenino'
 		self.write(vals)
-		end = time.time()
-		delta = end - start
-
-		# time difference in seconds
-		print("Time difference in seconds is: ", delta)
-
-		# time difference in milliseconds
-		ms = delta * 1000
-		print("Time difference in milliseconds is: ", ms)
+		# end = time.time()
+		# delta = end - start
+		# print("Time difference in seconds is: ", delta)
+		# ms = delta * 1000
 
 
 	@api.one
-	def asignar_variables(self):
+	def asignar_variables_riesgonet(self):
 		variable_1 = False
 		variable_2 = False
 		variable_3 = False
