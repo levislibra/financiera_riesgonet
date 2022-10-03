@@ -29,6 +29,7 @@ class ExtendsResPartnerRiesgonet(models.Model):
 	_name = 'res.partner'
 	_inherit = 'res.partner'
 
+	riesgonet_contratado = fields.Boolean('Riesgonet contratado', compute='_compute_riesgonet_contrtado')
 	riesgonet_informe_ids = fields.One2many('financiera.riesgonet.informe', 'partner_id', 'Riesgonet - Informes')
 	riesgonet_variable_ids = fields.One2many('financiera.riesgonet.informe.variable', 'partner_id', 'Variables')
 	riesgonet_variable_1 = fields.Char('Variable 1')
@@ -44,6 +45,10 @@ class ExtendsResPartnerRiesgonet(models.Model):
 	# Validacion por cuestionario
 	# riesgonet_cuestionario_ids = fields.One2many('financiera.riesgonet.cuestionario', 'partner_id', 'Riesgonet - Cuestionarios')
 	# riesgonet_cuestionario_id = fields.Many2one('financiera.riesgonet.cuestionario', 'Riesgonet - Cuestionario actual')
+
+	@api.one
+	def _compute_riesgonet_contrtado(self):
+		self.riesgonet_contratado = True if self.company_id.riesgonet_configuracion_id else False
 
 	def flatten(self, d, parent_key='', sep='_'):
 		items = []
