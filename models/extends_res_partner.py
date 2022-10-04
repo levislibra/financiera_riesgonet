@@ -29,7 +29,7 @@ class ExtendsResPartnerRiesgonet(models.Model):
 	_name = 'res.partner'
 	_inherit = 'res.partner'
 
-	riesgonet_contratado = fields.Boolean('Riesgonet contratado', compute='_compute_riesgonet_contrtado')
+	riesgonet_contratado = fields.Boolean('Riesgo Net', compute='_compute_riesgonet_contrtado')
 	riesgonet_informe_ids = fields.One2many('financiera.riesgonet.informe', 'partner_id', 'Riesgonet - Informes')
 	riesgonet_variable_ids = fields.One2many('financiera.riesgonet.informe.variable', 'partner_id', 'Variables')
 	riesgonet_variable_1 = fields.Char('Variable 1')
