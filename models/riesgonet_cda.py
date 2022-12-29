@@ -169,3 +169,7 @@ class FinancieraRiesgonetCdaRegla(models.Model):
 				self.riesgonet_cda_resultado_id.otorgar_cpm += self.cpm_sumar
 				if variable_id.valor and variable_id.valor.isdigit():
 					self.riesgonet_cda_resultado_id.otorgar_cpm += int(variable_id.valor) * self.cpm_multiplicar_valor
+		else:
+			# La variable no existe!
+			self.detalle = 'La variable no existe'
+			self.resultado = 'rechazado'
